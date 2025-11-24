@@ -9,9 +9,7 @@
     "dev:ui": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "install:agent": "sh ./scripts/setup-agent.sh || scripts\\setup-agent.bat",
-    "postinstall": "npm run install:agent"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@ag-ui/langgraph": "0.0.18",

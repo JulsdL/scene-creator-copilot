@@ -6,9 +6,9 @@ import {
 
 import { LangGraphAgent } from "@ag-ui/langgraph"
 import { NextRequest } from "next/server";
- 
-// 1. You can use any service adapter here for multi-agent support. We use
-//    the empty adapter since we're only using one agent.
+
+// 1. Use EmptyAdapter since we're in agent lock mode (LangGraph handles all LLM calls)
+//    Suggestions will be set programmatically via useCopilotChatSuggestions with static values
 const serviceAdapter = new ExperimentalEmptyAdapter();
  
 // 2. Create the CopilotRuntime instance and utilize the LangGraph AG-UI

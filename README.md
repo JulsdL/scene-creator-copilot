@@ -4,14 +4,17 @@ This is a starter template for building AI agents using [LangGraph](https://www.
 
 ## Prerequisites
 
-- Node.js 18+ 
-- Python 3.8+
-- Any of the following package managers:
+- Node.js 18+
+- Python 3.10+
+- Any of the following JavaScript package managers:
   - [pnpm](https://pnpm.io/installation) (recommended)
   - npm
   - [yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable)
   - [bun](https://bun.sh/)
-- OpenAI API Key (for the LangGraph agent)
+- Python package manager (one of):
+  - [uv](https://docs.astral.sh/uv/) (recommended for faster installs)
+  - pip (included with Python)
+- Google AI API Key (for Gemini 3 and Nano Banana)
 
 > **Note:** This repository ignores lock files (package-lock.json, yarn.lock, pnpm-lock.yaml, bun.lockb) to avoid conflicts between different package managers. Each developer should generate their own lock file using their preferred package manager. After that, make sure to delete it from the .gitignore.
 
@@ -32,13 +35,14 @@ yarn install
 bun install
 ```
 
-> **Note:** Installing the package dependencies will also install the agent's python dependencies via the `install:agent` script.
+> **Note:** Installing the package dependencies will also install the agent's Python dependencies via the `install:agent` script. The script will automatically use `uv` if available, otherwise it falls back to `pip`.
 
-
-2. Set up your OpenAI API key:
+2. Set up your Google AI API key:
 ```bash
-echo 'OPENAI_API_KEY=your-openai-api-key-here' > agent/.env
+echo 'GOOGLE_API_KEY=your-google-ai-api-key-here' > agent/.env
 ```
+
+Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey).
 
 3. Start the development server:
 ```bash
@@ -66,7 +70,7 @@ The following scripts can also be run using your preferred package manager:
 - `build` - Builds the Next.js application for production
 - `start` - Starts the production server
 - `lint` - Runs ESLint for code linting
-- `install:agent` - Installs Python dependencies for the agent
+- `install:agent` - Installs Python dependencies (uses `uv` if available, otherwise `pip`)
 
 ## Documentation
 
@@ -94,12 +98,26 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ### Agent Connection Issues
 If you see "I'm having trouble connecting to my tools", make sure:
-1. The LangGraph agent is running on port 8000
-2. Your OpenAI API key is set correctly
+1. The LangGraph agent is running on port 8123
+2. Your Google AI API key is set correctly in `agent/.env`
 3. Both servers started successfully
 
 ### Python Dependencies
-If you encounter Python import errors:
+If you encounter Python import errors, try reinstalling:
 ```bash
-npm install:agent
+npm run install:agent
+```
+
+Or install manually using uv (recommended):
+```bash
+cd agent
+uv pip install -r requirements.txt
+```
+
+Or using pip:
+```bash
+cd agent
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```

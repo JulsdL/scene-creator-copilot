@@ -1,171 +1,466 @@
 "use client";
 
-import { useCoAgent, useCopilotAction } from "@copilotkit/react-core";
-import { CopilotKitCSSProperties, CopilotSidebar } from "@copilotkit/react-ui";
-import { useState } from "react";
+import { useCoAgent, useCopilotAction, useCopilotReadable, useHumanInTheLoop } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-ui";
+import { ArtifactPanel } from "@/components/ArtifactPanel";
+import { CustomChatInput } from "@/components/CustomChatInput";
+import { ApiKeyInput } from "@/components/ApiKeyInput";
+import { ChatInputProvider } from "@/lib/chat-input-context";
+import { AgentState } from "@/lib/types";
+import { useRef, useMemo, useState, useEffect } from "react";
 
-export default function CopilotKitPage() {
-  const [themeColor, setThemeColor] = useState("#6366f1");
+const API_KEY_STORAGE_KEY = "google_api_key";
 
-  // 🪁 Frontend Actions: https://docs.copilotkit.ai/guides/frontend-actions
-  useCopilotAction({
-    name: "setThemeColor",
-    parameters: [{
-      name: "themeColor",
-      description: "The theme color to set. Make sure to pick nice colors.",
-      required: true, 
-    }],
-    handler({ themeColor }) {
-      setThemeColor(themeColor);
-    },
-  });
+export default function SceneCreatorPage() {
+  // API key state with localStorage persistence
+  const [apiKey, setApiKeyState] = useState("");
 
-  return (
-    <main style={{ "--copilot-kit-primary-color": themeColor } as CopilotKitCSSProperties}>
-      <YourMainContent themeColor={themeColor} />
-      <CopilotSidebar
-        clickOutsideToClose={false}
-        defaultOpen={true}
-        labels={{
-          title: "Popup Assistant",
-          initial: "👋 Hi, there! You're chatting with an agent. This agent comes with a few tools to get you started.\n\nFor example you can try:\n- **Frontend Tools**: \"Set the theme to orange\"\n- **Shared State**: \"Write a proverb about AI\"\n- **Generative UI**: \"Get the weather in SF\"\n\nAs you interact with the agent, you'll see the UI update in real-time to reflect the agent's **state**, **tool calls**, and **progress**."
-        }}
-      />
-    </main>
-  );
-}
+  // Load API key from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(API_KEY_STORAGE_KEY);
+    if (stored) {
+      setApiKeyState(stored);
+    }
+  }, []);
 
-// State of the agent, make sure this aligns with your agent's state.
-type AgentState = {
-  proverbs: string[];
-}
-
-function YourMainContent({ themeColor }: { themeColor: string }) {
-  // 🪁 Shared State: https://docs.copilotkit.ai/coagents/shared-state
-  const { state, setState } = useCoAgent<AgentState>({
+  // Shared state with the LangGraph agent
+  const { state, setState, running } = useCoAgent<AgentState>({
     name: "sample_agent",
     initialState: {
-      proverbs: [
-        "CopilotKit may be new, but its the best thing since sliced bread.",
-      ],
-    },
-  })
-
-  // 🪁 Frontend Actions: https://docs.copilotkit.ai/coagents/frontend-actions
-  useCopilotAction({
-    name: "addProverb",
-    parameters: [{
-      name: "proverb",
-      description: "The proverb to add. Make it witty, short and concise.",
-      required: true,
-    }],
-    handler: ({ proverb }) => {
-      setState({
-        ...state,
-        proverbs: [...(state.proverbs || []), proverb],
-      });
+      characters: [],
+      backgrounds: [],
+      scenes: [],
+      apiKey: "",
     },
   });
 
-  //🪁 Generative UI: https://docs.copilotkit.ai/coagents/generative-ui
-  useCopilotAction({
-    name: "get_weather",
-    description: "Get the weather for a given location.",
-    available: "disabled",
+  // Sync API key to agent state when it changes
+  useEffect(() => {
+    if (apiKey && apiKey !== state.apiKey) {
+      setState((prevState) => ({
+        characters: prevState?.characters || [],
+        backgrounds: prevState?.backgrounds || [],
+        scenes: prevState?.scenes || [],
+        apiKey,
+      }));
+    }
+  }, [apiKey, state.apiKey, setState]);
+
+  // Save API key to localStorage and agent state
+  const saveApiKey = (key: string) => {
+    localStorage.setItem(API_KEY_STORAGE_KEY, key);
+    setApiKeyState(key);
+    setState((prevState) => ({
+      characters: prevState?.characters || [],
+      backgrounds: prevState?.backgrounds || [],
+      scenes: prevState?.scenes || [],
+      apiKey: key,
+    }));
+  };
+
+  // Clear API key from localStorage and agent state
+  const clearApiKey = () => {
+    localStorage.removeItem(API_KEY_STORAGE_KEY);
+    setApiKeyState("");
+    setState((prevState) => ({
+      characters: prevState?.characters || [],
+      backgrounds: prevState?.backgrounds || [],
+      scenes: prevState?.scenes || [],
+      apiKey: "",
+    }));
+  };
+
+  // Keep a reference to the last valid state to prevent flickering during requests
+  const lastValidState = useRef<AgentState>({
+    characters: [],
+    backgrounds: [],
+    scenes: [],
+  });
+
+  // Update reference when we have actual data
+  const displayState = useMemo(() => {
+    const hasData =
+      (state.characters && state.characters.length > 0) ||
+      (state.backgrounds && state.backgrounds.length > 0) ||
+      (state.scenes && state.scenes.length > 0);
+
+    if (hasData) {
+      lastValidState.current = {
+        characters: state.characters || [],
+        backgrounds: state.backgrounds || [],
+        scenes: state.scenes || [],
+      };
+    }
+
+    // During loading, show the last known state if current is empty
+    if (running && !hasData && (
+      lastValidState.current.characters.length > 0 ||
+      lastValidState.current.backgrounds.length > 0 ||
+      lastValidState.current.scenes.length > 0
+    )) {
+      return lastValidState.current;
+    }
+
+    return {
+      characters: state.characters || [],
+      backgrounds: state.backgrounds || [],
+      scenes: state.scenes || [],
+    };
+  }, [state, running]);
+
+  // Make artifact data readable to the Copilot for better context awareness
+  useCopilotReadable({
+    description: "Available characters that can be used in scenes",
+    value: displayState.characters.map(c => ({ id: c.id, name: c.name, description: c.description })),
+  });
+
+  useCopilotReadable({
+    description: "Available backgrounds that can be used in scenes",
+    value: displayState.backgrounds.map(b => ({ id: b.id, name: b.name, description: b.description })),
+  });
+
+  useCopilotReadable({
+    description: "Created scenes combining characters and backgrounds",
+    value: displayState.scenes.map(s => ({
+      id: s.id,
+      name: s.name,
+      characterIds: s.characterIds,
+      backgroundId: s.backgroundId
+    })),
+  });
+
+  // Human-in-the-loop prompt approval before image generation
+  useHumanInTheLoop({
+    name: "approve_image_prompt",
+    description: "Request user approval for an image generation prompt before creating the image. Call this BEFORE calling create_character, create_background, or create_scene.",
     parameters: [
-      { name: "location", type: "string", required: true },
+      {
+        name: "artifact_type",
+        type: "string",
+        description: "Type of artifact: 'character', 'background', or 'scene'",
+        required: true,
+      },
+      {
+        name: "name",
+        type: "string",
+        description: "Name of the artifact being created",
+        required: true,
+      },
+      {
+        name: "prompt",
+        type: "string",
+        description: "The image generation prompt to be approved",
+        required: true,
+      },
     ],
-    render: ({ args }) => {
-      return <WeatherCard location={args.location} themeColor={themeColor} />
+    render: ({ args, status, respond, result }) => {
+      if (status === "executing" && respond) {
+        return (
+          <PromptApprovalCard
+            artifactType={args.artifact_type as string}
+            name={args.name as string}
+            prompt={args.prompt as string}
+            onApprove={(finalPrompt) => respond({ approved: true, prompt: finalPrompt })}
+            onCancel={() => respond({ approved: false })}
+          />
+        );
+      }
+
+      if (status === "complete" && result) {
+        const res = result as { approved: boolean; prompt?: string };
+        return (
+          <div className="my-3 rounded-lg border border-neutral-200 bg-white overflow-hidden shadow-sm px-4 py-3">
+            <div className="flex items-center gap-2">
+              {res.approved ? (
+                <>
+                  <span className="text-green-600">✓</span>
+                  <span className="text-sm text-neutral-600">Prompt approved</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-red-500">✕</span>
+                  <span className="text-sm text-neutral-600">Generation cancelled</span>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      return <></>;
     },
   });
 
+  // Generative UI for create_character tool
+  useCopilotAction({
+    name: "create_character",
+    available: "disabled",
+    render: ({ status, args, result }) => (
+      <ToolCard
+        icon="👤"
+        title="Creating Character"
+        status={status}
+        description={args?.description as string}
+        result={result ? `Created "${(result as any)?.name}"` : undefined}
+      />
+    ),
+  });
+
+  // Generative UI for create_background tool
+  useCopilotAction({
+    name: "create_background",
+    available: "disabled",
+    render: ({ status, args, result }) => (
+      <ToolCard
+        icon="🏞️"
+        title="Creating Background"
+        status={status}
+        description={args?.description as string}
+        result={result ? `Created "${(result as any)?.name}"` : undefined}
+      />
+    ),
+  });
+
+  // Generative UI for create_scene tool
+  useCopilotAction({
+    name: "create_scene",
+    available: "disabled",
+    render: ({ status, args, result }) => (
+      <ToolCard
+        icon="🎬"
+        title="Composing Scene"
+        status={status}
+        description={args?.description as string}
+        result={result ? `Created "${(result as any)?.name}"` : undefined}
+      />
+    ),
+  });
+
+  // Generative UI for edit_character tool
+  useCopilotAction({
+    name: "edit_character",
+    available: "disabled",
+    render: ({ status, args, result }) => (
+      <ToolCard
+        icon="✏️"
+        title="Editing Character"
+        status={status}
+        description={args?.edit_description as string}
+        result={result && !(result as any)?.error ? `Updated "${(result as any)?.name}"` : (result as any)?.error}
+      />
+    ),
+  });
+
+  // Generative UI for edit_background tool
+  useCopilotAction({
+    name: "edit_background",
+    available: "disabled",
+    render: ({ status, args, result }) => (
+      <ToolCard
+        icon="✏️"
+        title="Editing Background"
+        status={status}
+        description={args?.edit_description as string}
+        result={result && !(result as any)?.error ? `Updated "${(result as any)?.name}"` : (result as any)?.error}
+      />
+    ),
+  });
+
+  // Generative UI for edit_scene tool
+  useCopilotAction({
+    name: "edit_scene",
+    available: "disabled",
+    render: ({ status, args, result }) => (
+      <ToolCard
+        icon="✏️"
+        title="Editing Scene"
+        status={status}
+        description={args?.edit_description as string}
+        result={result && !(result as any)?.error ? `Updated "${(result as any)?.name}"` : (result as any)?.error}
+      />
+    ),
+  });
+
+  // Show only API key input if no key is set
+  if (!apiKey) {
+    return (
+      <main className="h-screen w-screen flex items-center justify-center bg-[var(--bg-primary)]">
+        <div className="max-w-2xl w-full px-8">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold uppercase mb-4">Scene Creator</h1>
+            <p className="text-lg opacity-70">
+              AI-powered scene generation with Gemini 3 & Nano Banana
+            </p>
+          </div>
+          <ApiKeyInput
+            currentKey={apiKey}
+            onSave={saveApiKey}
+            onClear={clearApiKey}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <div
-      style={{ backgroundColor: themeColor }}
-      className="h-screen w-screen flex justify-center items-center flex-col transition-colors duration-300"
-    >
-      <div className="bg-white/20 backdrop-blur-md p-8 rounded-2xl shadow-xl max-w-2xl w-full">
-        <h1 className="text-4xl font-bold text-white mb-2 text-center">Proverbs</h1>
-        <p className="text-gray-200 text-center italic mb-6">This is a demonstrative page, but it could be anything you want! 🪁</p>
-        <hr className="border-white/20 my-6" />
-        <div className="flex flex-col gap-3">
-          {state.proverbs?.map((proverb, index) => (
-            <div 
-              key={index} 
-              className="bg-white/15 p-4 rounded-xl text-white relative group hover:bg-white/20 transition-all"
-            >
-              <p className="pr-8">{proverb}</p>
-              <button 
-                onClick={() => setState({
-                  ...state,
-                  proverbs: (state.proverbs || []).filter((_, i) => i !== index),
-                })}
-                className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity 
-                  bg-red-500 hover:bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center"
-              >
-                ✕
-              </button>
+    <ChatInputProvider>
+      <main className="h-screen w-screen flex relative">
+        {/* Floating API Key Tooltip - Top Left */}
+        <div className="absolute bottom-4 left-4 z-50">
+          <ApiKeyInput
+            currentKey={apiKey}
+            onSave={saveApiKey}
+            onClear={clearApiKey}
+          />
+        </div>
+
+        {/* Main artifact display panel */}
+        <ArtifactPanel
+          characters={displayState.characters}
+          backgrounds={displayState.backgrounds}
+          scenes={displayState.scenes}
+        />
+
+        {/* Chat sidebar */}
+        <CopilotSidebar
+          clickOutsideToClose={false}
+          defaultOpen={true}
+          Input={CustomChatInput}
+          labels={{
+            title: "Scene Creator",
+            initial: `Welcome to Scene Creator!
+
+I'll help you create scenes by generating characters and backgrounds, then combining them together.
+
+**To get started:**
+1. Describe a character you'd like to create
+2. Describe a background/environment
+3. Ask me to combine them into a scene
+
+What would you like to create first?`,
+          }}
+        />
+      </main>
+    </ChatInputProvider>
+  );
+}
+
+// Tool progress card component for Generative UI
+function ToolCard({
+  icon,
+  title,
+  status,
+  description,
+  result,
+}: {
+  icon: string;
+  title: string;
+  status: string;
+  description?: string;
+  result?: string;
+}) {
+  const isComplete = status === "complete";
+  const isExecuting = status === "executing" || status === "inProgress";
+
+  return (
+    <div className="my-4 brutalist-card p-4">
+      <div className="flex items-start gap-4">
+        <div className="flex items-center justify-center w-10 h-10 border-2 border-black bg-[var(--accent-yellow)] text-xl font-bold">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-bold uppercase tracking-wider text-sm">{title}</span>
+            {isExecuting && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold bg-[var(--accent-blue)] text-white px-2 py-0.5 border border-black">
+                <span className="animate-pulse">PROCESSING</span>
+              </span>
+            )}
+            {isComplete && (
+              <span className="text-xs font-bold bg-[var(--accent-red)] text-white px-2 py-0.5 border border-black">DONE</span>
+            )}
+          </div>
+          {description && (
+            <p className="text-sm text-neutral-600 mb-2 border-l-2 border-neutral-300 pl-2">
+              {description}
+            </p>
+          )}
+          {isComplete && result && (
+            <div className="mt-2 text-sm font-bold p-2 bg-neutral-100 border border-black">
+              → {result}
             </div>
-          ))}
+          )}
         </div>
-        {state.proverbs?.length === 0 && <p className="text-center text-white/80 italic my-8">
-          No proverbs yet. Ask the assistant to add some!
-        </p>}
       </div>
     </div>
   );
 }
 
-// Simple sun icon for the weather card
-function SunIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14 text-yellow-200">
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" strokeWidth="2" stroke="currentColor" />
-    </svg>
-  );
-}
+// Prompt approval card component for HITL
+function PromptApprovalCard({
+  artifactType,
+  name,
+  prompt,
+  onApprove,
+  onCancel,
+}: {
+  artifactType: string;
+  name: string;
+  prompt: string;
+  onApprove: (prompt: string) => void;
+  onCancel: () => void;
+}) {
+  const [editedPrompt, setEditedPrompt] = useState(prompt);
+  const [isEditing, setIsEditing] = useState(false);
 
-// Weather card component where the location and themeColor are based on what the agent
-// sets via tool calls.
-function WeatherCard({ location, themeColor }: { location?: string, themeColor: string }) {
+  const icon = artifactType === "character" ? "👤" : artifactType === "background" ? "🏞️" : "🎬";
+
   return (
-    <div
-    style={{ backgroundColor: themeColor }}
-    className="rounded-xl shadow-xl mt-6 mb-4 max-w-md w-full"
-  >
-    <div className="bg-white/20 p-4 w-full">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xl font-bold text-white capitalize">{location}</h3>
-          <p className="text-white">Current Weather</p>
-        </div>
-        <SunIcon />
+    <div className="my-4 brutalist-card bg-[var(--accent-yellow)] p-4">
+      <div className="flex items-center gap-3 mb-4 border-b-2 border-black pb-2">
+        <span className="text-2xl">{icon}</span>
+        <span className="font-bold uppercase text-lg">
+          APPROVE {artifactType}
+        </span>
       </div>
-      
-      <div className="mt-4 flex items-end justify-between">
-        <div className="text-3xl font-bold text-white">70°</div>
-        <div className="text-sm text-white">Clear skies</div>
+
+      <div className="mb-4">
+        <div className="text-xs font-bold uppercase mb-1 opacity-70">Target: {name}</div>
+        {isEditing ? (
+          <textarea
+            value={editedPrompt}
+            onChange={(e) => setEditedPrompt(e.target.value)}
+            className="w-full p-3 text-sm border-2 border-black bg-white resize-none focus:outline-none focus:shadow-[4px_4px_0px_0px_black]"
+            rows={6}
+            autoFocus
+          />
+        ) : (
+          <div className="bg-white border-2 border-black p-3 text-sm font-mono">
+            {editedPrompt}
+          </div>
+        )}
       </div>
-      
-      <div className="mt-4 pt-4 border-t border-white">
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="text-white text-xs">Humidity</p>
-            <p className="text-white font-medium">45%</p>
-          </div>
-          <div>
-            <p className="text-white text-xs">Wind</p>
-            <p className="text-white font-medium">5 mph</p>
-          </div>
-          <div>
-            <p className="text-white text-xs">Feels Like</p>
-            <p className="text-white font-medium">72°</p>
-          </div>
-        </div>
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => onApprove(editedPrompt)}
+          className="flex-1 brutalist-btn bg-[var(--accent-blue)] text-black py-2 px-4 hover:bg-blue-700"
+        >
+          {isEditing ? "SAVE & RUN" : "EXECUTE"}
+        </button>
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          className="brutalist-btn bg-black py-2 px-4"
+        >
+          {isEditing ? "CANCEL EDIT" : "EDIT"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="brutalist-btn bg-[var(--accent-red)] text-black py-2 px-4"
+        >
+          ABORT
+        </button>
       </div>
     </div>
-  </div>
   );
 }
