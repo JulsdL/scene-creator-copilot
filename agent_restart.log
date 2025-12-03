@@ -1,0 +1,9 @@
+
+> langgraph-python-starter@0.1.0 dev:agent
+> cd agent && npx @langchain/langgraph-cli dev --port 8123 --no-browser
+
+[31merror[39m:   [31m[2m▪[22m[0m [0m[31mError: ENOENT: no such file or directory, open '/app/agent/.env'[39m
+[31m    at async open (node:internal/fs/promises:641:25)[39m
+[31m    at async Module.readFile (node:internal/fs/promises:1245:14)[39m
+[31m    at async prepareContext (file:///app/node_modules/@langchain/langgraph-cli/dist/cli/dev.mjs:79:37)[39m
+[31m    at async launchServer (file:///app/node_modules/@langchain/langgraph-cli/dist/cli/dev.mjs:108:46)[39m

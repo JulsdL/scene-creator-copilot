@@ -8,7 +8,7 @@ import shutil
 import uuid
 import os
 from pathlib import Path
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -35,9 +35,32 @@ def get_agent_url() -> str:
     """Get the agent's base URL for serving static files."""
     return os.getenv("AGENT_URL", "http://127.0.0.1:8123")
 
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+ALLOWED_MIME_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Upload a file to the generated directory."""
+
+    # Validate content type
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}"
+        )
+
+    # Validate file size
+    # Check if the file is spooled to disk or in memory
+    file.file.seek(0, 2)  # Seek to end
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Maximum size allowed is {MAX_FILE_SIZE / (1024 * 1024)}MB"
+        )
+
     # Generate unique filename
     ext = file.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"

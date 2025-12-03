@@ -71,7 +71,8 @@ export function CustomChatInput({ inProgress, onSend }: InputProps) {
         });
 
         if (!response.ok) {
-          throw new Error("Upload failed");
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || "Upload failed");
         }
 
         const data = await response.json();
@@ -85,7 +86,7 @@ export function CustomChatInput({ inProgress, onSend }: InputProps) {
         setInputValue("");
       } catch (error) {
         console.error("Error uploading file:", error);
-        alert("Failed to upload file. Please try again.");
+        alert(`Failed to upload file: ${(error as Error).message}`);
       } finally {
         setIsUploading(false);
       }
