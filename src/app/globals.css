@@ -1,111 +1,130 @@
 @import "tailwindcss";
 
 :root {
-  /* Neo-Brutalist Palette */
-  --bg-primary: #F2F0E9; /* Warm off-white */
-  --bg-secondary: #E6E4DD;
-  --bg-card: #FFFFFF;
+  /* Luxury / Professional Palette */
+  --bg-primary: #0B0F19; /* Deep dark blue/black */
+  --bg-secondary: #151B2B; /* Lighter dark */
+  --bg-card: #1C2333;
+  --bg-card-glass: rgba(28, 35, 51, 0.8);
+
+  --fg-primary: #E2E8F0; /* Slate 200 */
+  --fg-secondary: #94A3B8; /* Slate 400 */
+  --fg-muted: #64748B; /* Slate 500 */
+
+  --accent-primary: #3B82F6; /* Blue 500 (Professional) */
+  --accent-gold: #C5A572; /* Muted Gold (Luxury) */
+  --accent-success: #10B981; /* Emerald 500 */
+  --accent-error: #EF4444; /* Red 500 */
+
+  --border-light: rgba(255, 255, 255, 0.1);
+  --border-highlight: rgba(255, 255, 255, 0.2);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
   
-  --fg-primary: #121212;
-  --fg-secondary: #555555;
-  
-  --accent-red: #FF3333;
-  --accent-blue: #3355FF;
-  --accent-yellow: #FFCC00;
-  
-  --border-color: #121212;
-  
-  --shadow-hard: 4px 4px 0px 0px var(--border-color);
-  --shadow-hard-hover: 6px 6px 0px 0px var(--border-color);
-  --shadow-hard-sm: 2px 2px 0px 0px var(--border-color);
+  --radius-std: 0.75rem;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--fg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 12px;
-  background: var(--bg-secondary);
-  border-left: 2px solid var(--border-color);
+  width: 8px;
+  background: var(--bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--fg-primary);
-  border: 2px solid var(--bg-secondary);
+  background: var(--bg-secondary);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-red);
+  background: var(--fg-muted);
 }
 
 /* Utilities */
-.brutalist-card {
+.luxury-card {
   background-color: var(--bg-card);
-  border: 2px solid var(--border-color);
-  box-shadow: var(--shadow-hard);
-  transition: all 0.1s ease;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-std);
+  box-shadow: var(--shadow-md);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
 }
 
-.brutalist-card:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--shadow-hard-hover);
+.luxury-card:hover {
+  border-color: var(--border-highlight);
+  box-shadow: var(--shadow-lg);
 }
 
-.brutalist-btn {
-  background-color: var(--bg-card);
-  border: 2px solid var(--border-color);
-  box-shadow: var(--shadow-hard-sm);
-  font-weight: 700;
-  text-transform: uppercase;
-  transition: all 0.1s ease;
+.luxury-btn {
+  background-color: var(--bg-secondary);
+  color: var(--fg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  letter-spacing: 0.025em;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
-.brutalist-btn:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px 0px var(--border-color);
-  background-color: var(--accent-yellow);
+.luxury-btn:hover:not(:disabled) {
+  background-color: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
 }
 
-.brutalist-btn:active:not(:disabled) {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px 0px var(--border-color);
+.luxury-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
-.brutalist-btn:disabled {
+.luxury-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  box-shadow: none;
-  transform: translate(2px, 2px);
 }
 
-.brutalist-input {
-  background-color: var(--bg-card);
-  border: 2px solid var(--border-color);
-  box-shadow: var(--shadow-hard-sm);
+.luxury-input {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  color: var(--fg-primary);
   outline: none;
-  transition: all 0.1s ease;
+  transition: all 0.2s ease;
+  padding: 0.75rem;
 }
 
-.brutalist-input:focus {
-  border-color: var(--accent-blue);
-  box-shadow: 4px 4px 0px 0px var(--accent-blue);
+.luxury-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.luxury-input:disabled {
+  opacity: 0.6;
 }
 
 /* Copilot Kit Overrides */
 .copilot-kit-sidebar {
-  border-left: 2px solid var(--border-color) !important;
+  border-left: 1px solid var(--border-light) !important;
   background-color: var(--bg-primary) !important;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.5);
 }
 
 /* Pattern Background Utility */
 .bg-grid-pattern {
   background-image: 
-    linear-gradient(var(--border-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+    linear-gradient(var(--border-light) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
   background-size: 40px 40px;
   background-position: center center;
-  opacity: 0.5;
+  opacity: 0.2;
 }
