@@ -295,6 +295,60 @@ async def edit_image(image_url: str, edit_prompt: str, api_key: str = None) -> s
 # === Backend tools for the main agent ===
 
 @tool
+async def register_character(
+    name: str,
+    image_url: str,
+    description: str = "Imported character",
+    state: Annotated[dict, InjectedState] = None
+) -> dict:
+    """Register an existing image as a character.
+
+    Args:
+        name: Name of the character
+        image_url: URL to the existing image
+        description: Brief description (defaults to "Imported character")
+
+    Returns:
+        Character data
+    """
+    character_id = str(uuid.uuid4())
+
+    return {
+        "id": character_id,
+        "name": name,
+        "description": description,
+        "prompt": "Imported from upload",
+        "imageUrl": image_url
+    }
+
+@tool
+async def register_background(
+    name: str,
+    image_url: str,
+    description: str = "Imported background",
+    state: Annotated[dict, InjectedState] = None
+) -> dict:
+    """Register an existing image as a background.
+
+    Args:
+        name: Name of the background
+        image_url: URL to the existing image
+        description: Brief description (defaults to "Imported background")
+
+    Returns:
+        Background data
+    """
+    background_id = str(uuid.uuid4())
+
+    return {
+        "id": background_id,
+        "name": name,
+        "description": description,
+        "prompt": "Imported from upload",
+        "imageUrl": image_url
+    }
+
+@tool
 async def create_character(
     name: str,
     description: str,
@@ -621,7 +675,11 @@ async def edit_scene(
 
 
 # Backend tools list
-backend_tools = [create_character, create_background, create_scene, edit_character, edit_background, edit_scene]
+backend_tools = [
+    create_character, create_background, create_scene,
+    edit_character, edit_background, edit_scene,
+    register_character, register_background
+]
 backend_tool_names = [tool.name for tool in backend_tools]
 
 
@@ -660,6 +718,8 @@ You have tools to create and edit characters, backgrounds, and scenes. When call
 - **create_background(name, description, prompt)**: Create a background image
 - **create_scene(name, description, prompt, character_ids, background_id)**: Compose a scene from characters + background
 - **edit_character/edit_background/edit_scene**: Edit existing images
+- **register_character(name, image_url)**: Register an uploaded character image
+- **register_background(name, image_url)**: Register an uploaded background image
 
 ## CRITICAL: Human-in-the-Loop Approval
 **Before calling create_character, create_background, or create_scene, you MUST first call approve_image_prompt.**
@@ -675,6 +735,14 @@ Example flow:
 - You: Call approve_image_prompt(artifact_type="character", name="Warrior", prompt="A fierce warrior...")
 - [User approves with maybe edited prompt]
 - You: Call create_character(name="Warrior", description="...", prompt="<the approved prompt from result>")
+
+## Handling File Uploads
+If the user says "I uploaded a [type]. URL: [url]":
+1. Acknowledge the upload.
+2. Ask the user for the **name** of the character or background.
+3. Once the user replies with the name, call **register_character** or **register_background** with the name and the provided URL.
+   - Do NOT call approve_image_prompt for uploads (since we aren't generating an image).
+   - Just register it directly after getting the name.
 
 ## Current Session State
 Characters:
@@ -810,6 +878,14 @@ async def process_tool_results(state: AgentState, config: RunnableConfig) -> Com
                         if s["id"] == result["id"]:
                             new_scenes[i] = result
                             break
+                # Handle register tools
+                elif tool_name == "register_character" and isinstance(result, dict) and "id" in result:
+                     if not any(c["id"] == result["id"] for c in new_characters):
+                        new_characters.append(result)
+                elif tool_name == "register_background" and isinstance(result, dict) and "id" in result:
+                     if not any(b["id"] == result["id"] for b in new_backgrounds):
+                        new_backgrounds.append(result)
+
 
             except (json.JSONDecodeError, TypeError):
                 pass  # Not a JSON result, skip
