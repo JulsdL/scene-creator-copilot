@@ -4,6 +4,15 @@ import { type InputProps } from "@copilotkit/react-ui";
 import { useChatInput } from "@/lib/chat-input-context";
 import { useEffect, useRef } from "react";
 
+/**
+ * Render a controlled chat input with a textarea and a send button.
+ *
+ * The textarea is registered with the chat input context, focuses and moves the cursor to the end when the external `inputValue` changes, and submits on Enter (unless Shift is held). The send button is disabled while `inProgress` is true or when the trimmed input is empty; invoking send clears the input.
+ *
+ * @param inProgress - When true, disables the textarea and send button
+ * @param onSend - Callback invoked with the current input value when submitting
+ * @returns A JSX element containing the controlled textarea and send button
+ */
 export function CustomChatInput({ inProgress, onSend }: InputProps) {
   const { inputValue, setInputValue, setInputRef } = useChatInput();
   const inputRef = useRef<HTMLTextAreaElement>(null);

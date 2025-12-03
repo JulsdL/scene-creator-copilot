@@ -9,6 +9,16 @@ interface ArtifactPanelProps {
   scenes: Scene[];
 }
 
+/**
+ * Render the artifact panel showing Scenes, Characters, and Locations or an empty-state prompt when none exist.
+ *
+ * The panel groups provided artifacts into responsive sections and exposes an edit action that populates the chat input with the formatted edit command (`[EDIT {type} {id}]: `) when a card's Edit button is clicked.
+ *
+ * @param characters - Array of character artifacts to display in the Characters section.
+ * @param backgrounds - Array of background artifacts displayed under the Locations section.
+ * @param scenes - Array of scene artifacts displayed in the Scenes section.
+ * @returns The rendered artifact panel element containing sectioned artifact cards or an EmptyState when no artifacts are present.
+ */
 export function ArtifactPanel({ characters, backgrounds, scenes }: ArtifactPanelProps) {
   const { setInputValue } = useChatInput();
 
@@ -106,6 +116,14 @@ export function ArtifactPanel({ characters, backgrounds, scenes }: ArtifactPanel
   );
 }
 
+/**
+ * Render an empty-state panel prompting the user to begin creating artifacts.
+ *
+ * Displays a centered illustrative emoji avatar, the heading "Begin Creation", and helper text
+ * instructing the user to use the terminal to generate characters, environments, and scenes.
+ *
+ * @returns A React element containing the empty-state UI
+ */
 function EmptyState() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center p-8 relative z-10">
@@ -120,6 +138,14 @@ function EmptyState() {
   );
 }
 
+/**
+ * Renders a titled artifact section with a horizontal divider, a count badge, and provided content.
+ *
+ * @param title - The section heading text displayed in uppercase.
+ * @param count - The numeric badge shown on the right of the header representing item count.
+ * @param children - The content rendered below the header (e.g., a grid of artifact cards).
+ * @returns A section element containing the header row and the supplied children.
+ */
 function ArtifactSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
     <section>
@@ -135,6 +161,15 @@ function ArtifactSection({ title, count, children }: { title: string; count: num
   );
 }
 
+/**
+ * Renders an artifact card with a corner type badge, content area, title, and optional Edit action.
+ *
+ * @param title - Display title shown in the card footer and used as the tooltip for truncated text
+ * @param type - Label rendered in the corner badge (e.g., "Scene", "Character", "Location")
+ * @param children - Visual content placed in the card body (image or placeholder)
+ * @param onEdit - Optional callback invoked when the Edit button is clicked
+ * @returns The rendered artifact card element
+ */
 function ArtifactCard({ title, type, children, onEdit }: { title: string; type: string; children: React.ReactNode; onEdit?: () => void }) {
   return (
     <div className="luxury-card overflow-hidden group border-white/5 hover:border-white/20 bg-slate-900/40">
