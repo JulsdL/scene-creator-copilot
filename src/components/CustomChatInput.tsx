@@ -114,7 +114,7 @@ export function CustomChatInput({ inProgress, onSend }: InputProps) {
         <div className="p-4 border-b-2 border-black bg-white flex items-center gap-4 animate-in slide-in-from-bottom-2">
           <div className="relative group">
             <img
-              src={filePreview || ""}
+              src={filePreview || undefined}
               alt="Preview"
               className="h-20 w-20 object-cover border-2 border-black"
             />
