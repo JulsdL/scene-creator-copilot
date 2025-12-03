@@ -30,7 +30,7 @@ GENERATED_DIR.mkdir(exist_ok=True)
 
 def get_agent_url() -> str:
     """Get the agent's base URL for serving static files."""
-    return os.getenv("AGENT_URL", "http://localhost:8000")
+    return os.getenv("AGENT_URL", "http://127.0.0.1:8123")
 
 
 def get_image_path(image_url: str) -> Path:
@@ -42,6 +42,15 @@ def get_image_path(image_url: str) -> Path:
     agent_url = get_agent_url()
     if base_url.startswith(agent_url):
         base_url = base_url[len(agent_url):]
+
+    # Also handle localhost fallback if agent_url is 127.0.0.1 or vice versa
+    localhost_url = "http://localhost:8123"
+    ipv4_url = "http://127.0.0.1:8123"
+
+    if base_url.startswith(localhost_url):
+        base_url = base_url[len(localhost_url):]
+    elif base_url.startswith(ipv4_url):
+        base_url = base_url[len(ipv4_url):]
 
     # Handle relative /generated/ URLs
     if base_url.startswith("/generated/"):
