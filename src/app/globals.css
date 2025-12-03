@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -23,6 +24,7 @@
 body {
   background-color: var(--bg-primary);
   color: var(--fg-primary);
+  font-family: "Space Mono", "IBM Plex Mono", "Courier New", monospace;
 }
 
 /* Custom Scrollbar */
@@ -95,9 +97,49 @@ body {
 }
 
 /* Copilot Kit Overrides */
-.copilot-kit-sidebar {
+.copilotKitSidebar {
   border-left: 2px solid var(--border-color) !important;
   background-color: var(--bg-primary) !important;
+}
+
+.inline-chat-sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+}
+
+@media (min-width: 1024px) {
+  .inline-chat-sidebar {
+    height: 100%;
+  }
+}
+
+.inline-chat-sidebar .copilotKitButton {
+  display: none;
+}
+
+.inline-chat-sidebar .copilotKitWindow {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.inline-chat-sidebar .copilotKitChat {
+  height: 100%;
+}
+
+.inline-chat-sidebar .copilotKitMessages {
+  flex: 1;
+  min-height: 0;
 }
 
 /* Pattern Background Utility */

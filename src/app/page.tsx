@@ -13,7 +13,7 @@ const API_KEY_STORAGE_KEY = "google_api_key";
 
 export default function SceneCreatorPage() {
   // API key state with localStorage persistence
-  const [apiKey, setApiKeyState] = useState("");
+  const [apiKey, setApiKeyState] = useState("debug");
 
   // Load API key from localStorage on mount
   useEffect(() => {
@@ -304,7 +304,7 @@ export default function SceneCreatorPage() {
 
   return (
     <ChatInputProvider>
-      <main className="h-screen w-screen flex relative">
+      <main className="h-screen w-screen flex flex-col lg:flex-row relative">
         {/* Floating API Key Tooltip - Top Left */}
         <div className="absolute bottom-4 left-4 z-50">
           <ApiKeyInput
@@ -323,6 +323,7 @@ export default function SceneCreatorPage() {
 
         {/* Chat sidebar */}
         <CopilotSidebar
+          className="inline-chat-sidebar w-full max-w-full lg:w-[420px] lg:max-w-[420px] shrink-0 lg:h-full"
           clickOutsideToClose={false}
           defaultOpen={true}
           Input={CustomChatInput}

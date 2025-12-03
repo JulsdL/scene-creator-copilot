@@ -37,7 +37,7 @@ def detect_mime_type(file_path: Path) -> str:
 
 def get_agent_url() -> str:
     """Get the agent's base URL for serving static files."""
-    return os.getenv("AGENT_URL", "http://localhost:8000")
+    return os.getenv("AGENT_URL", "http://127.0.0.1:8123")
 
 
 def get_image_path(image_url: str) -> Path:
@@ -49,6 +49,15 @@ def get_image_path(image_url: str) -> Path:
     agent_url = get_agent_url()
     if base_url.startswith(agent_url):
         base_url = base_url[len(agent_url):]
+
+    #Also handle localhost fallback if agent_url is 127.0.0.1 or vice versa
+    localhost_url = "http://localhost:8123"
+    ipv4_url = "http://127.0.0.1:8123"
+
+    if base_url.startswith(localhost_url):
+        base_url = base_url[len(localhost_url):]
+    elif base_url.startswith(ipv4_url):
+        base_url = base_url[len(ipv4_url):]
 
     # Handle relative /generated/ URLs
     if base_url.startswith("/generated/"):
@@ -95,6 +104,10 @@ async def generate_image(prompt: str, input_images: List[str] = None, api_key: s
     if not api_key:
         api_key = os.getenv("GOOGLE_API_KEY")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent"
+
+    #Dynamic model selection
+    image_model = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{image_model}:generateContent"
 
     # Build parts array
     parts = []
@@ -197,39 +210,6 @@ async def generate_image(prompt: str, input_images: List[str] = None, api_key: s
 
     print("[Error] Max retries exceeded for image generation.")
     return None
-    #     response = await client.post(url, json=payload, headers=headers)
-    #     response.raise_for_status()
-    #     data = response.json()
-
-    # # Extract image data from response and save to disk
-    # if "candidates" in data and len(data["candidates"]) > 0:
-    #     parts = data["candidates"][0].get("content", {}).get("parts", [])
-    #     for part in parts:
-    #         if "inlineData" in part:
-    #             image_data = part["inlineData"]["data"]
-    #             mime_type = part["inlineData"].get("mimeType", "image/png")
-
-    #             # Determine file extension
-    #             ext = "png" if "png" in mime_type else "jpg"
-
-    #             # Generate unique filename
-    #             filename = f"{uuid.uuid4()}.{ext}"
-
-    #             # Save to agent's generated directory
-    #             output_path = GENERATED_DIR / filename
-
-    #             # Decode and save (using to_thread for async compatibility)
-    #             image_bytes = base64.b64decode(image_data)
-
-    #             def save_image():
-    #                 output_path.write_bytes(image_bytes)
-
-    #             await asyncio.to_thread(save_image)
-
-    #             # Return absolute URL that frontend can use
-    #             return f"{get_agent_url()}/generated/{filename}"
-
-    # return None
 
 
 async def edit_image(image_url: str, edit_prompt: str, api_key: str = None) -> str:
@@ -245,8 +225,11 @@ async def edit_image(image_url: str, edit_prompt: str, api_key: str = None) -> s
     """
     if not api_key:
         api_key = os.getenv("GOOGLE_API_KEY")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent"
 
+    # Dynamic Model Selection
+    image_model = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{image_model}:generateContent"
+    
     # Convert URL to file path
     file_path = get_image_path(image_url)
 
