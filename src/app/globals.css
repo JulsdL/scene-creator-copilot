@@ -149,5 +149,4 @@ body {
     linear-gradient(90deg, color-mix(in srgb, var(--border-color), transparent) 1px, transparent 1px);
   background-size: 40px 40px;
   background-position: center center;
-  opacity: 0.5;
 }

@@ -7,13 +7,55 @@ import { CustomChatInput } from "@/components/CustomChatInput";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { ChatInputProvider } from "@/lib/chat-input-context";
 import { AgentState } from "@/lib/types";
-import { useRef, useMemo, useState, useEffect } from "react";
+import { useRef, useMemo, useState, useEffect, useCallback } from "react";
 
 const API_KEY_STORAGE_KEY = "google_api_key";
+type PendingToolName = "create_character" | "create_background" | "create_scene";
+
+type PendingAction = {
+  id: string;
+  toolName: PendingToolName;
+  targetName: string;
+  title: string;
+  icon: string;
+  description: string;
+};
+
+const TOOL_METADATA: Record<PendingToolName, { icon: string; title: string }> = {
+  create_character: { icon: "👤", title: "Creating Character" },
+  create_background: { icon: "🏞️", title: "Creating Background" },
+  create_scene: { icon: "🎬", title: "Composing Scene" },
+};
+
+const createPendingId = () => {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`;
+};
+
+const mapArtifactTypeToTool = (artifactType: string): PendingToolName => {
+  const normalized = (artifactType || "").toLowerCase();
+  if (normalized === "background") {
+    return "create_background";
+  }
+  if (normalized === "scene") {
+    return "create_scene";
+  }
+  return "create_character";
+};
+
+const formatPendingDescription = (promptText: string) => {
+  const trimmed = promptText.trim();
+  if (!trimmed) {
+    return "Awaiting image generation...";
+  }
+  return trimmed.length > 300 ? `${trimmed.slice(0, 297)}...` : trimmed;
+};
 
 export default function SceneCreatorPage() {
   // API key state with localStorage persistence
   const [apiKey, setApiKeyState] = useState("debug");
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
 
   // Load API key from localStorage on mount
   useEffect(() => {
@@ -108,6 +150,59 @@ export default function SceneCreatorPage() {
     };
   }, [state, running]);
 
+  const registerPendingAction = useCallback((artifactType: string, targetName: string, promptText: string) => {
+    const toolName = mapArtifactTypeToTool(artifactType);
+    const meta = TOOL_METADATA[toolName];
+    const description = formatPendingDescription(promptText);
+    setPendingActions((prev) => [
+      ...prev.filter((action) => !(action.toolName === toolName && action.targetName === targetName)),
+      {
+        id: createPendingId(),
+        toolName,
+        targetName,
+        title: meta.title,
+        icon: meta.icon,
+        description,
+      },
+    ]);
+  }, []);
+
+  const clearPendingAction = useCallback((toolName: PendingToolName, targetName?: string) => {
+    setPendingActions((prev) =>
+      prev.filter((action) => {
+        if (action.toolName !== toolName) {
+          return true;
+        }
+        if (!targetName) {
+          return false;
+        }
+        return action.targetName !== targetName;
+      }),
+    );
+  }, []);
+
+  useEffect(() => {
+    if (pendingActions.length === 0) {
+      return;
+    }
+    setPendingActions((prev) =>
+      prev.filter((action) => {
+        if (action.toolName === "create_character") {
+          return !displayState.characters.some((c) => c.name === action.targetName);
+        }
+        if (action.toolName === "create_background") {
+          return !displayState.backgrounds.some((b) => b.name === action.targetName);
+        }
+        return !displayState.scenes.some((s) => s.name === action.targetName);
+      }),
+    );
+  }, [
+    displayState.characters,
+    displayState.backgrounds,
+    displayState.scenes,
+    pendingActions.length,
+  ]);
+
   // Make artifact data readable to the Copilot for better context awareness
   useCopilotReadable({
     description: "Available characters that can be used in scenes",
@@ -160,6 +255,9 @@ export default function SceneCreatorPage() {
             artifactType={args.artifact_type as string}
             name={args.name as string}
             prompt={args.prompt as string}
+            onStartPending={(finalPrompt) =>
+              registerPendingAction(args.artifact_type as string, args.name as string, finalPrompt)
+            }
             onApprove={(finalPrompt) => respond({ approved: true, prompt: finalPrompt })}
             onCancel={() => respond({ approved: false })}
           />
@@ -196,7 +294,10 @@ export default function SceneCreatorPage() {
     name: "create_character",
     available: "disabled",
     render: ({ status, args, result }) => (
-      <ToolCard
+      <ActionToolCard
+        toolName="create_character"
+        artifactName={args?.name as string}
+        clearPending={clearPendingAction}
         icon="👤"
         title="Creating Character"
         status={status}
@@ -211,7 +312,10 @@ export default function SceneCreatorPage() {
     name: "create_background",
     available: "disabled",
     render: ({ status, args, result }) => (
-      <ToolCard
+      <ActionToolCard
+        toolName="create_background"
+        artifactName={args?.name as string}
+        clearPending={clearPendingAction}
         icon="🏞️"
         title="Creating Background"
         status={status}
@@ -226,7 +330,10 @@ export default function SceneCreatorPage() {
     name: "create_scene",
     available: "disabled",
     render: ({ status, args, result }) => (
-      <ToolCard
+      <ActionToolCard
+        toolName="create_scene"
+        artifactName={args?.name as string}
+        clearPending={clearPendingAction}
         icon="🎬"
         title="Composing Scene"
         status={status}
@@ -322,14 +429,15 @@ export default function SceneCreatorPage() {
         />
 
         {/* Chat sidebar */}
-        <CopilotSidebar
-          className="inline-chat-sidebar w-full max-w-full lg:w-[420px] lg:max-w-[420px] shrink-0 lg:h-full"
-          clickOutsideToClose={false}
-          defaultOpen={true}
-          Input={CustomChatInput}
-          labels={{
-            title: "Scene Creator",
-            initial: `Welcome to Scene Creator!
+        <div className="inline-chat-sidebar w-full max-w-full lg:w-[420px] lg:max-w-[420px] shrink-0 h-full flex flex-col">
+          <CopilotSidebar
+            className="inline-chat-sidebar w-full max-w-full lg:w-[420px] lg:max-w-[420px] shrink-0 flex-1"
+            clickOutsideToClose={false}
+            defaultOpen={true}
+            Input={CustomChatInput}
+            labels={{
+              title: "Scene Creator",
+              initial: `Welcome to Scene Creator!
 
 I'll help you create scenes by generating characters and backgrounds, then combining them together.
 
@@ -339,27 +447,43 @@ I'll help you create scenes by generating characters and backgrounds, then combi
 3. Ask me to combine them into a scene
 
 What would you like to create first?`,
-          }}
-        />
+            }}
+          />
+          {pendingActions.length > 0 && (
+            <div className="px-4 pb-4 pt-2 border-t-2 border-black bg-[var(--bg-primary)] max-h-64 overflow-y-auto">
+              {pendingActions.map((action) => (
+                <ToolCard
+                  key={action.id}
+                  icon={action.icon}
+                  title={action.title}
+                  status="inProgress"
+                  description={action.description}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </ChatInputProvider>
   );
 }
 
 // Tool progress card component for Generative UI
+type ToolCardProps = {
+  icon: string;
+  title: string;
+  status: string;
+  description?: string;
+  result?: string;
+};
+
 function ToolCard({
   icon,
   title,
   status,
   description,
   result,
-}: {
-  icon: string;
-  title: string;
-  status: string;
-  description?: string;
-  result?: string;
-}) {
+}: ToolCardProps) {
   const isComplete = status === "complete";
   const isExecuting = status === "executing" || status === "inProgress";
 
@@ -397,17 +521,40 @@ function ToolCard({
   );
 }
 
+type ActionToolCardProps = ToolCardProps & {
+  toolName: PendingToolName;
+  artifactName?: string;
+  clearPending: (tool: PendingToolName, targetName?: string) => void;
+};
+
+function ActionToolCard({
+  toolName,
+  artifactName,
+  clearPending,
+  ...toolCardProps
+}: ActionToolCardProps) {
+  useEffect(() => {
+    if (artifactName) {
+      clearPending(toolName, artifactName);
+    }
+  }, [artifactName, toolName, clearPending]);
+
+  return <ToolCard {...toolCardProps} />;
+}
+
 // Prompt approval card component for HITL
 function PromptApprovalCard({
   artifactType,
   name,
   prompt,
+  onStartPending,
   onApprove,
   onCancel,
 }: {
   artifactType: string;
   name: string;
   prompt: string;
+  onStartPending?: (prompt: string) => void;
   onApprove: (prompt: string) => void;
   onCancel: () => void;
 }) {
@@ -444,7 +591,12 @@ function PromptApprovalCard({
 
       <div className="flex gap-3">
         <button
-          onClick={() => onApprove(editedPrompt)}
+          onClick={() => {
+            if (onStartPending) {
+              onStartPending(editedPrompt);
+            }
+            onApprove(editedPrompt);
+          }}
           className="flex-1 brutalist-btn bg-[var(--accent-blue)] text-black py-2 px-4 hover:bg-blue-700"
         >
           {isEditing ? "SAVE & RUN" : "EXECUTE"}
