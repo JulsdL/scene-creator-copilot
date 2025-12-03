@@ -10,6 +10,7 @@ import httpx
 import base64
 import asyncio
 import time
+import mimetypes
 from pathlib import Path
 from typing import Any, List, Annotated
 from typing_extensions import Literal
@@ -26,6 +27,12 @@ from langgraph.prebuilt import ToolNode, InjectedState
 # === Generated images directory ===
 GENERATED_DIR = Path(__file__).parent / "generated"
 GENERATED_DIR.mkdir(exist_ok=True)
+
+
+def detect_mime_type(file_path: Path) -> str:
+    """Return an image mime type based on the file suffix."""
+    mime_type, _ = mimetypes.guess_type(str(file_path))
+    return mime_type or "image/png"
 
 
 def get_agent_url() -> str:
@@ -108,10 +115,11 @@ async def generate_image(prompt: str, input_images: List[str] = None, api_key: s
 
                 image_bytes = await asyncio.to_thread(read_image, file_path)
                 image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+                mime_type = detect_mime_type(file_path)
 
                 parts.append({
                     "inline_data": {
-                        "mime_type": "image/png",
+                        "mime_type": mime_type,
                         "data": image_base64
                     }
                 })
@@ -133,40 +141,95 @@ async def generate_image(prompt: str, input_images: List[str] = None, api_key: s
         "x-goog-api-key": api_key
     }
 
+    # ---Retry Loop ---
+    max_retries = 3
+    base_wait = 2  # Seconds
+
     async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        data = response.json()
+        for attempt in range(max_retries):
 
-    # Extract image data from response and save to disk
-    if "candidates" in data and len(data["candidates"]) > 0:
-        parts = data["candidates"][0].get("content", {}).get("parts", [])
-        for part in parts:
-            if "inlineData" in part:
-                image_data = part["inlineData"]["data"]
-                mime_type = part["inlineData"].get("mimeType", "image/png")
+            try:
+                response = await client.post(url, json=payload, headers=headers)
 
-                # Determine file extension
-                ext = "png" if "png" in mime_type else "jpg"
+                # If we hit the rate limit (429), wait and retry
+                if response.status_code == 429:
+                    wait_time = base_wait * (2 ** attempt)  # Exponential backoff: 2s, 4s, 8s
+                    print(f"[Warning] Image quota hit (429). Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue  # Try again
 
-                # Generate unique filename
-                filename = f"{uuid.uuid4()}.{ext}"
+                # For other errors, raise immediately
+                response.raise_for_status()
 
-                # Save to agent's generated directory
-                output_path = GENERATED_DIR / filename
+                # If successful, process data
+                data = response.json()
 
-                # Decode and save (using to_thread for async compatibility)
-                image_bytes = base64.b64decode(image_data)
+                # --- Process Response (Same as before) ---
+                if "candidates" in data and len(data["candidates"]) > 0:
+                    parts = data["candidates"][0].get("content", {}).get("parts", [])
+                    for part in parts:
+                        if "inlineData" in part:
+                            image_data = part["inlineData"]["data"]
+                            mime_type = part["inlineData"].get("mimeType", "image/png")
+                            ext = "png" if "png" in mime_type else "jpg"
+                            filename = f"{uuid.uuid4()}.{ext}"
+                            output_path = GENERATED_DIR / filename
+                            image_bytes = base64.b64decode(image_data)
 
-                def save_image():
-                    output_path.write_bytes(image_bytes)
+                            def save_image(): output_path.write_bytes(image_bytes)
+                            await asyncio.to_thread(save_image)
 
-                await asyncio.to_thread(save_image)
+                            return f"{get_agent_url()}/generated/{filename}"
+                return None # No image found in successful response
 
-                # Return absolute URL that frontend can use
-                return f"{get_agent_url()}/generated/{filename}"
+            except httpx.HTTPStatusError as e:
+                # If it's a 429 but not caught above (rare) or other 5xx
+                if e.response.status_code == 429:
+                     wait_time = base_wait * (2 ** attempt)
+                     print(f"[Warning] HTTP 429. Retrying in {wait_time}s...")
+                     await asyncio.sleep(wait_time)
+                else:
+                    print(f"[Error] Image generation failed: {e}")
+                    raise e  # Re-raise other errors
+            except Exception as e:
+                print(f"[Error] Unexpected error in generate_image: {e}")
+                return None
 
+    print("[Error] Max retries exceeded for image generation.")
     return None
+    #     response = await client.post(url, json=payload, headers=headers)
+    #     response.raise_for_status()
+    #     data = response.json()
+
+    # # Extract image data from response and save to disk
+    # if "candidates" in data and len(data["candidates"]) > 0:
+    #     parts = data["candidates"][0].get("content", {}).get("parts", [])
+    #     for part in parts:
+    #         if "inlineData" in part:
+    #             image_data = part["inlineData"]["data"]
+    #             mime_type = part["inlineData"].get("mimeType", "image/png")
+
+    #             # Determine file extension
+    #             ext = "png" if "png" in mime_type else "jpg"
+
+    #             # Generate unique filename
+    #             filename = f"{uuid.uuid4()}.{ext}"
+
+    #             # Save to agent's generated directory
+    #             output_path = GENERATED_DIR / filename
+
+    #             # Decode and save (using to_thread for async compatibility)
+    #             image_bytes = base64.b64decode(image_data)
+
+    #             def save_image():
+    #                 output_path.write_bytes(image_bytes)
+
+    #             await asyncio.to_thread(save_image)
+
+    #             # Return absolute URL that frontend can use
+    #             return f"{get_agent_url()}/generated/{filename}"
+
+    # return None
 
 
 async def edit_image(image_url: str, edit_prompt: str, api_key: str = None) -> str:
@@ -196,6 +259,7 @@ async def edit_image(image_url: str, edit_prompt: str, api_key: str = None) -> s
 
     image_bytes = await asyncio.to_thread(read_image, file_path)
     image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+    mime_type = detect_mime_type(file_path)
 
     # Build request with image and edit prompt
     payload = {
@@ -203,7 +267,7 @@ async def edit_image(image_url: str, edit_prompt: str, api_key: str = None) -> s
             "parts": [
                 {
                     "inline_data": {
-                        "mime_type": "image/png",
+                        "mime_type": mime_type,
                         "data": image_base64
                     }
                 },
