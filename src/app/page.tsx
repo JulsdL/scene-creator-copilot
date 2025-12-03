@@ -11,6 +11,16 @@ import { useRef, useMemo, useState, useEffect } from "react";
 
 const API_KEY_STORAGE_KEY = "google_api_key";
 
+/**
+ * Renders the Scene Creator page — an AI-powered UI for creating characters, backgrounds, and scenes.
+ *
+ * This component manages an API key (persisted to localStorage), synchronizes it with a shared agent state,
+ * exposes artifact data to Copilot-readable contexts, registers human-in-the-loop prompt approval and
+ * Copilot-driven actions (create/edit character/background/scene), and displays the main UI: an artifact
+ * panel and a chat-driven Copilot sidebar. When no API key is present, it shows only the API key input.
+ *
+ * @returns The page JSX for the Scene Creator UI including API key handling, artifact display, and the Copilot sidebar.
+ */
 export default function SceneCreatorPage() {
   // API key state with localStorage persistence
   const [apiKey, setApiKeyState] = useState("");
@@ -345,7 +355,16 @@ What would you like to create first?`,
   );
 }
 
-// Tool progress card component for Generative UI
+/**
+ * Render a compact tool progress card showing an icon, title, status badge, optional description, and optional result.
+ *
+ * @param icon - Short icon or emoji displayed in the leading badge
+ * @param title - Primary title shown for the tool action
+ * @param status - Current status string; `executing` or `inProgress` shows a processing badge, `complete` shows a completion badge
+ * @param description - Optional explanatory text rendered beneath the title
+ * @param result - Optional result summary shown when status is `complete`
+ * @returns A JSX element representing the tool's progress card
+ */
 function ToolCard({
   icon,
   title,
@@ -396,7 +415,16 @@ function ToolCard({
   );
 }
 
-// Prompt approval card component for HITL
+/**
+ * Render a human-in-the-loop approval card that lets users review, edit, and approve an image-generation prompt.
+ *
+ * @param artifactType - The kind of artifact being approved (e.g., "character", "background", "scene"); used to adjust icon and heading.
+ * @param name - The target name of the artifact shown to the user.
+ * @param prompt - The initial generation prompt presented for review and optional editing.
+ * @param onApprove - Called with the final prompt when the user approves (executes) the action.
+ * @param onCancel - Called when the user aborts the approval flow.
+ * @returns A JSX element that displays the approval UI with prompt viewing/editing and action buttons.
+ */
 function PromptApprovalCard({
   artifactType,
   name,

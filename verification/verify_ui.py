@@ -1,6 +1,11 @@
 from playwright.sync_api import sync_playwright
 
 def verify_luxury_ui():
+    """
+    Perform an automated UI verification against http://localhost:3000 and capture screenshots.
+    
+    Launches a headless Chromium browser, navigates to http://localhost:3000 (60s timeout), waits for a `main` element to appear (60s timeout), and saves a success screenshot to verification/luxury_ui_verification.png. On any exception, logs the error and saves a fallback screenshot to verification/error_screenshot.png. Ensures the browser is closed in all cases.
+    """
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()

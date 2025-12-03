@@ -8,6 +8,14 @@ interface ApiKeyInputProps {
   onClear: () => void;
 }
 
+/**
+ * Render an input and display UI for entering, changing, or clearing an API key.
+ *
+ * @param currentKey - Current API key to display; when present the component initially shows a masked preview.
+ * @param onSave - Callback invoked with the trimmed API key when the user saves a new key.
+ * @param onClear - Callback invoked when the user clears the stored API key.
+ * @returns A React element that shows either a masked key preview with Change/Clear actions or an editing form for entering the API key.
+ */
 export function ApiKeyInput({ currentKey, onSave, onClear }: ApiKeyInputProps) {
   const [input, setInput] = useState("");
   const [isEditing, setIsEditing] = useState(!currentKey);
