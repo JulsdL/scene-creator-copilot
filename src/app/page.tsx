@@ -169,17 +169,17 @@ export default function SceneCreatorPage() {
       if (status === "complete" && result) {
         const res = result as { approved: boolean; prompt?: string };
         return (
-          <div className="my-3 rounded-lg border border-white/10 bg-white/5 overflow-hidden shadow-sm px-4 py-3">
+          <div className="my-3 rounded-lg border border-neutral-200 bg-white overflow-hidden shadow-sm px-4 py-3">
             <div className="flex items-center gap-2">
               {res.approved ? (
                 <>
-                  <span className="text-emerald-500">✓</span>
-                  <span className="text-sm text-slate-300">Prompt approved</span>
+                  <span className="text-green-600">✓</span>
+                  <span className="text-sm text-neutral-600">Prompt approved</span>
                 </>
               ) : (
                 <>
                   <span className="text-red-500">✕</span>
-                  <span className="text-sm text-slate-300">Generation cancelled</span>
+                  <span className="text-sm text-neutral-600">Generation cancelled</span>
                 </>
               )}
             </div>
@@ -286,9 +286,9 @@ export default function SceneCreatorPage() {
     return (
       <main className="h-screen w-screen flex items-center justify-center bg-[var(--bg-primary)]">
         <div className="max-w-2xl w-full px-8">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-light mb-4 text-white tracking-tight">Scene Creator</h1>
-            <p className="text-lg text-slate-400 font-light">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold uppercase mb-4">Scene Creator</h1>
+            <p className="text-lg opacity-70">
               AI-powered scene generation with Gemini 3 & Nano Banana
             </p>
           </div>
@@ -363,30 +363,30 @@ function ToolCard({
   const isExecuting = status === "executing" || status === "inProgress";
 
   return (
-    <div className="my-4 luxury-card p-4">
+    <div className="my-4 brutalist-card p-4">
       <div className="flex items-start gap-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-white/5 text-xl font-bold text-[var(--accent-gold)]">
+        <div className="flex items-center justify-center w-10 h-10 border-2 border-black bg-[var(--accent-yellow)] text-xl font-bold">
           {icon}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm text-slate-200">{title}</span>
+            <span className="font-bold uppercase tracking-wider text-sm">{title}</span>
             {isExecuting && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] px-2 py-0.5 rounded-full border border-[var(--accent-primary)]/30">
-                <span className="animate-pulse">Processing...</span>
+              <span className="inline-flex items-center gap-1 text-xs font-bold bg-[var(--accent-blue)] text-white px-2 py-0.5 border border-black">
+                <span className="animate-pulse">PROCESSING</span>
               </span>
             )}
             {isComplete && (
-              <span className="text-xs font-medium bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Done</span>
+              <span className="text-xs font-bold bg-[var(--accent-red)] text-white px-2 py-0.5 border border-black">DONE</span>
             )}
           </div>
           {description && (
-            <p className="text-sm text-slate-400 mb-2 border-l-2 border-slate-700 pl-2">
+            <p className="text-sm text-neutral-600 mb-2 border-l-2 border-neutral-300 pl-2">
               {description}
             </p>
           )}
           {isComplete && result && (
-            <div className="mt-2 text-sm text-slate-300 p-3 rounded-md bg-white/5 border border-white/10">
+            <div className="mt-2 text-sm font-bold p-2 bg-neutral-100 border border-black">
               → {result}
             </div>
           )}
@@ -416,49 +416,49 @@ function PromptApprovalCard({
   const icon = artifactType === "character" ? "👤" : artifactType === "background" ? "🏞️" : "🎬";
 
   return (
-    <div className="my-4 luxury-card p-0 overflow-hidden border-[var(--accent-gold)]/30 shadow-[0_0_15px_rgba(197,165,114,0.1)]">
-      <div className="flex items-center gap-3 p-4 bg-[var(--accent-gold)]/10 border-b border-[var(--accent-gold)]/20">
+    <div className="my-4 brutalist-card bg-[var(--accent-yellow)] p-4">
+      <div className="flex items-center gap-3 mb-4 border-b-2 border-black pb-2">
         <span className="text-2xl">{icon}</span>
-        <span className="font-semibold text-[var(--accent-gold)] tracking-wide text-sm uppercase">
-          Approve {artifactType}
+        <span className="font-bold uppercase text-lg">
+          APPROVE {artifactType}
         </span>
       </div>
 
-      <div className="p-4">
-        <div className="text-xs font-medium text-slate-500 uppercase mb-2 tracking-wider">Target: {name}</div>
+      <div className="mb-4">
+        <div className="text-xs font-bold uppercase mb-1 opacity-70">Target: {name}</div>
         {isEditing ? (
           <textarea
             value={editedPrompt}
             onChange={(e) => setEditedPrompt(e.target.value)}
-            className="w-full p-3 text-sm rounded-md border border-slate-600 bg-slate-900/50 text-slate-200 resize-none focus:outline-none focus:ring-1 focus:ring-[var(--accent-gold)] transition-all"
+            className="w-full p-3 text-sm border-2 border-black bg-white resize-none focus:outline-none focus:shadow-[4px_4px_0px_0px_black]"
             rows={6}
             autoFocus
           />
         ) : (
-          <div className="bg-slate-900/50 rounded-md border border-slate-700/50 p-3 text-sm text-slate-300 font-light leading-relaxed">
+          <div className="bg-white border-2 border-black p-3 text-sm font-mono">
             {editedPrompt}
           </div>
         )}
       </div>
 
-      <div className="flex gap-2 p-4 bg-black/20 border-t border-white/5">
+      <div className="flex gap-3">
         <button
           onClick={() => onApprove(editedPrompt)}
-          className="flex-1 luxury-btn bg-[var(--accent-gold)] hover:bg-[var(--accent-gold)]/90 text-slate-900 border-none font-bold"
+          className="flex-1 brutalist-btn bg-[var(--accent-blue)] text-black py-2 px-4 hover:bg-blue-700"
         >
-          {isEditing ? "Save & Run" : "Execute"}
+          {isEditing ? "SAVE & RUN" : "EXECUTE"}
         </button>
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className="luxury-btn bg-transparent border-slate-600 text-slate-300 hover:text-white hover:border-slate-400"
+          className="brutalist-btn bg-black py-2 px-4"
         >
-          {isEditing ? "Cancel" : "Edit"}
+          {isEditing ? "CANCEL EDIT" : "EDIT"}
         </button>
         <button
           onClick={onCancel}
-          className="luxury-btn bg-transparent border-red-900/50 text-red-400 hover:bg-red-900/20 hover:border-red-800"
+          className="brutalist-btn bg-[var(--accent-red)] text-black py-2 px-4"
         >
-          Abort
+          ABORT
         </button>
       </div>
     </div>

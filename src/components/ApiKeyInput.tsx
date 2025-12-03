@@ -28,66 +28,64 @@ export function ApiKeyInput({ currentKey, onSave, onClear }: ApiKeyInputProps) {
 
   if (!isEditing && currentKey) {
     return (
-      <div className="luxury-card p-2 px-3 bg-slate-800/80 backdrop-blur-md max-w-xs border border-white/10 shadow-lg">
-        <div className="flex items-center gap-3">
-          <span className="text-sm">🔑</span>
-          <div className="text-xs font-mono text-slate-400">
+      <div className="brutalist-card p-3 bg-[var(--accent-blue)] max-w-xs">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-lg">🔑</span>
+          <div className="text-xs font-mono opacity-70">
             {currentKey.substring(0, 8)}...
           </div>
-          <div className="flex gap-1 ml-auto">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-white/5 transition-colors"
-            >
-              Change
-            </button>
-            <button
-              onClick={handleClear}
-              className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
-            >
-              Clear
-            </button>
-          </div>
+        </div>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="brutalist-btn bg-white px-2 py-1 text-xs"
+          >
+            CHANGE
+          </button>
+          <button
+            onClick={handleClear}
+            className="brutalist-btn bg-[var(--accent-red)] text-black px-2 py-1 text-xs"
+          >
+            CLEAR
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="luxury-card p-5 bg-slate-900/90 backdrop-blur-xl max-w-sm border border-[var(--accent-gold)]/30 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-8 h-8 rounded-full bg-[var(--accent-gold)]/10 flex items-center justify-center text-[var(--accent-gold)]">
-          🔑
-        </div>
-        <div className="font-semibold text-sm text-slate-200">API Access Required</div>
+    <div className="brutalist-card p-3 bg-[var(--accent-yellow)] max-w-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">🔑</span>
+        <div className="font-bold uppercase text-xs">API KEY</div>
       </div>
-      <div className="mb-4 text-xs text-slate-400 leading-relaxed">
-        Please enter your Google AI API key to initialize the generation engine.
+      <div className="mb-2 text-xs opacity-80">
+        Enter your Google AI API key
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2">
         <input
           type="password"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
-          placeholder="Paste your API key here..."
-          className="w-full px-3 py-2.5 rounded-md border border-slate-700 bg-black/40 font-mono text-xs text-slate-200 focus:outline-none focus:border-[var(--accent-gold)] focus:ring-1 focus:ring-[var(--accent-gold)] placeholder-slate-600 transition-all"
+          placeholder="AIza..."
+          className="w-full px-2 py-1.5 border-2 border-black bg-white font-mono text-xs focus:outline-none focus:shadow-[3px_3px_0px_0px_black]"
           autoFocus
         />
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-1">
           <button
             onClick={handleSave}
             disabled={!input.trim()}
-            className="flex-1 luxury-btn bg-[var(--accent-gold)] text-slate-900 hover:bg-[var(--accent-gold)]/90 border-none font-bold py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 brutalist-btn bg-[var(--accent-blue)] text-black px-2 py-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Authenticate
+            SAVE
           </button>
           {currentKey && (
             <button
               onClick={() => setIsEditing(false)}
-              className="luxury-btn bg-transparent border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 py-2"
+              className="brutalist-btn bg-white px-2 py-1 text-xs"
             >
-              Cancel
+              CANCEL
             </button>
           )}
         </div>

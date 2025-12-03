@@ -38,25 +38,24 @@ export function CustomChatInput({ inProgress, onSend }: InputProps) {
   };
 
   return (
-    <div className="flex gap-3 p-4 border-t border-white/10 bg-[var(--bg-primary)]">
-      <div className="relative flex-1">
-        <textarea
-          ref={inputRef}
-          disabled={inProgress}
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your command..."
-          rows={1}
-          className="w-full px-4 py-3 luxury-input text-sm resize-none disabled:opacity-50 min-h-[50px] max-h-[150px] bg-[var(--bg-secondary)] border-transparent focus:border-[var(--accent-primary)] focus:ring-1 focus:ring-[var(--accent-primary)] placeholder-slate-500"
-        />
-      </div>
+    <div className="flex gap-2 p-4 border-t-2 border-black bg-[var(--bg-primary)]">
+      <textarea
+        ref={inputRef}
+        disabled={inProgress}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="ENTER COMMAND..."
+        rows={1}
+        className="flex-1 px-4 py-3 brutalist-input text-sm resize-none disabled:bg-neutral-200"
+        style={{ minHeight: "50px", maxHeight: "150px" }}
+      />
       <button
         disabled={inProgress || !inputValue.trim()}
         onClick={handleSubmit}
-        className="luxury-btn self-end mb-[1px] h-[46px] px-6 text-sm font-medium tracking-wide bg-[var(--accent-primary)] text-white hover:bg-blue-600 disabled:bg-slate-800 disabled:text-slate-600 border-none shadow-lg shadow-blue-900/20"
+        className="brutalist-btn bg-[var(--accent-red)] text-black px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm tracking-widest"
       >
-        Send
+        TRANSMIT
       </button>
     </div>
   );
