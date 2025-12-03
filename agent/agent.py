@@ -30,7 +30,7 @@ GENERATED_DIR.mkdir(exist_ok=True)
 
 def get_agent_url() -> str:
     """Get the agent's base URL for serving static files."""
-    return os.getenv("AGENT_URL", "http://localhost:8000")
+    return os.getenv("AGENT_URL", "http://127.0.0.1:8123")
 
 
 def get_image_path(image_url: str) -> Path:
