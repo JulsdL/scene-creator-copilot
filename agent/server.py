@@ -51,15 +51,20 @@ async def upload_file(file: UploadFile = File(...)):
 
     # Validate file size
     # Check if the file is spooled to disk or in memory
-    file.file.seek(0, 2)  # Seek to end
-    file_size = file.file.tell()
-    file.file.seek(0)  # Reset to beginning
-
-    if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File too large. Maximum size allowed is {MAX_FILE_SIZE / (1024 * 1024)}MB"
-        )
+    try:
+        file.file.seek(0, 2)  # Seek to end
+        file_size = file.file.tell()
+        file.file.seek(0)  # Reset to beginning
+    except Exception:
+        # Fallback for streams that don't support seek (though UploadFile usually does)
+        # In this case we might not be able to check size efficiently without reading
+        pass
+    else:
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File too large. Maximum size allowed is {MAX_FILE_SIZE / (1024 * 1024)}MB"
+            )
 
     # Generate unique filename
     ext = file.filename.split(".")[-1]
@@ -67,7 +72,12 @@ async def upload_file(file: UploadFile = File(...)):
     file_path = GENERATED_DIR / filename
 
     # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    finally:
+        await file.close()
 
     return {"url": f"{get_agent_url()}/generated/{filename}"}
