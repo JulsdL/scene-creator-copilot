@@ -371,6 +371,9 @@ async def create_character(
     # Generate the character image using Nano Banana
     image_url = await generate_image(prompt, api_key=api_key)
 
+    if not image_url:
+        return {"error": "Failed to generate character image"}
+
     character_id = str(uuid.uuid4())
 
     return {
@@ -404,6 +407,9 @@ async def create_background(
 
     # Generate the background image using Nano Banana
     image_url = await generate_image(prompt, api_key=api_key)
+
+    if not image_url:
+        return {"error": "Failed to generate background image"}
 
     background_id = str(uuid.uuid4())
 
@@ -446,9 +452,14 @@ async def create_scene(
 
     # Validate and collect character images
     for char_id in character_ids:
+        # Fuzzy match for character ID or name if direct match fails
         char = next((c for c in characters if c["id"] == char_id), None)
         if not char:
-            return {"error": f"Character with id {char_id} not found"}
+            # Fallback: Try matching by name (case-insensitive)
+            char = next((c for c in characters if c["name"].lower() == char_id.lower()), None)
+
+        if not char:
+            return {"error": f"Character with id/name '{char_id}' not found"}
         if not char.get("imageUrl"):
             return {"error": f"Character '{char.get('name', char_id)}' has no image"}
         input_images.append(char["imageUrl"])
@@ -456,7 +467,11 @@ async def create_scene(
     # Validate and collect background image
     bg = next((b for b in backgrounds if b["id"] == background_id), None)
     if not bg:
-        return {"error": f"Background with id {background_id} not found"}
+        # Fallback: Try matching by name (case-insensitive)
+        bg = next((b for b in backgrounds if b["name"].lower() == background_id.lower()), None)
+
+    if not bg:
+        return {"error": f"Background with id/name '{background_id}' not found"}
     if not bg.get("imageUrl"):
         return {"error": f"Background '{bg.get('name', background_id)}' has no image"}
     input_images.append(bg["imageUrl"])
@@ -466,6 +481,9 @@ async def create_scene(
 
     # Generate the scene image using Nano Banana with character/background images
     image_url = await generate_image(prompt, input_images, api_key=api_key)
+
+    if not image_url:
+        return {"error": "Failed to generate scene image"}
 
     scene_id = str(uuid.uuid4())
 
@@ -615,11 +633,19 @@ async def edit_scene(
         # Collect character images
         for char_id in char_ids:
             char = next((c for c in characters if c["id"] == char_id), None)
+            if not char:
+                 # Fallback: Try matching by name (case-insensitive)
+                char = next((c for c in characters if c["name"].lower() == char_id.lower()), None)
+
             if char and char.get("imageUrl"):
                 input_images.append(char["imageUrl"])
 
         # Collect background image
         bg = next((b for b in backgrounds if b["id"] == bg_id), None)
+        if not bg:
+             # Fallback: Try matching by name (case-insensitive)
+            bg = next((b for b in backgrounds if b["name"].lower() == bg_id.lower()), None)
+
         if bg and bg.get("imageUrl"):
             input_images.append(bg["imageUrl"])
 
