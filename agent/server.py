@@ -7,6 +7,7 @@ Configure in langgraph.json via http.app setting.
 import shutil
 import uuid
 import os
+import asyncio
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -38,6 +39,11 @@ def get_agent_url() -> str:
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_MIME_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
 
+def save_file_sync(file_obj, destination: Path):
+    """Synchronously save file to destination."""
+    with open(destination, "wb") as buffer:
+        shutil.copyfileobj(file_obj, buffer)
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Upload a file to the generated directory."""
@@ -52,9 +58,9 @@ async def upload_file(file: UploadFile = File(...)):
     # Validate file size
     # Check if the file is spooled to disk or in memory
     try:
-        file.file.seek(0, 2)  # Seek to end
-        file_size = file.file.tell()
-        file.file.seek(0)  # Reset to beginning
+        await asyncio.to_thread(file.file.seek, 0, 2)  # Seek to end
+        file_size = await asyncio.to_thread(file.file.tell)
+        await asyncio.to_thread(file.file.seek, 0)  # Reset to beginning
     except Exception:
         # Fallback for streams that don't support seek (though UploadFile usually does)
         # In this case we might not be able to check size efficiently without reading
@@ -73,8 +79,7 @@ async def upload_file(file: UploadFile = File(...)):
 
     # Save file
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        await asyncio.to_thread(save_file_sync, file.file, file_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
     finally:
